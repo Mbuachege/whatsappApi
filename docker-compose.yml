@@ -1,8 +1,7 @@
 version: '3.8'
 
 services:
-  whatsapp-api:
-    image: ${DOCKER_USERNAME}/whatsapp-api:latest
+    image: $mbuachege/whatsappApi:latest
     container_name: whatsapp-api-gateway
     restart: unless-stopped
 
