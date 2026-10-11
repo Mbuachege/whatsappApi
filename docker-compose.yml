@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   whatsapp-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME}/whatsapp-api:latest
     container_name: whatsapp-api-gateway
     restart: unless-stopped
 
