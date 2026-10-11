@@ -1,13 +1,33 @@
 version: '3.8'
 
 services:
-whatsapp-api:
-image: ghcr.io/mbuachege/whatsappApi:latest
-container_name: whatsapp-api-gateway
-restart: unless-stopped
-environment:
-TZ: "America/New_York"
+  whatsapp-api:
+    image: ghcr.io/mbuachege/whatsappapi:latest
+    container_name: whatsapp-api-gateway
+    restart: unless-stopped
+
+    volumes:
+      - whatsapp_data:/app/.waweb
+
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - TZ=Africa/Nairobi
+
+    networks:
+      - proxy
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  whatsapp_data:
+    driver: local
 
 networks:
-proxy:
-external: true
+  proxy:
+    external: true
