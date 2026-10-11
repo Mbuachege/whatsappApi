@@ -1,8 +1,8 @@
 import express, { Request, Response, NextFunction } from 'express'
 import path from 'path'
-import { config } from './config/config.js'
-import { WhatsAppManager } from './whatsapp/WhatsAppManager.js'
-import logger from './utils/logger.js'
+import { config } from './config/config'
+import { WhatsAppManager } from './whatsapp/WhatsAppManager'
+import logger from './utils/logger'
 import fs from 'fs'
 
 const app = express()

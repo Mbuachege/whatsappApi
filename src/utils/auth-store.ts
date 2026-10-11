@@ -6,7 +6,7 @@ import {
   AuthenticationState,
 } from '@whiskeysockets/baileys'
 import { BufferJSON } from '@whiskeysockets/baileys'
-import logger from './logger.js'
+import logger from './logger'
 
 /**
  * SQLite-based authentication state store for production use

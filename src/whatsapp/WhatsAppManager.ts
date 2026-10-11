@@ -4,8 +4,8 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
 import P from 'pino'
-import logger from '../utils/logger.js'
-import { SQLiteAuthStore } from '../utils/auth-store.js'
+import logger from '../utils/logger'
+import { SQLiteAuthStore } from '../utils/auth-store'
 
 interface ManagerState {
   status: 'DISCONNECTED' | 'CONNECTING' | 'QR' | 'PAIRING_CODE' | 'CONNECTED' | 'LOGGED_OUT'

@@ -3,7 +3,6 @@
   "version": "2.0.0",
   "description": "Production-ready WhatsApp API Gateway using Baileys with SQLite persistence",
   "main": "dist/server.js",
-  "type": "module",
   "scripts": {
     "dev": "ts-node src/server.ts",
     "build": "tsc",
