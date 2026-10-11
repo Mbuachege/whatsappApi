@@ -1,13 +1,15 @@
 version: '3.8'
 
 services:
-    image: ghcr.io/mbuachege/whatsappApi:latest
-    container_name: whatsapp-api-gateway
-    restart: unless-stopped
-    environment:
-      TZ: "America/New_York"
-    networks:
-      - proxy
+whatsapp-api:
+image: ghcr.io/mbuachege/whatsappApi:latest
+container_name: whatsapp-api-gateway
+restart: unless-stopped
+environment:
+TZ: "America/New_York"
 networks:
-  proxy:
-    external: true
+- proxy
+
+networks:
+proxy:
+external: true
