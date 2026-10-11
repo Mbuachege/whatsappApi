@@ -7,8 +7,6 @@ container_name: whatsapp-api-gateway
 restart: unless-stopped
 environment:
 TZ: "America/New_York"
-networks:
-- proxy
 
 networks:
 proxy:
