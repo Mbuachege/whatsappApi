@@ -10,8 +10,11 @@ RUN apk add --no-cache python3 make g++ cairo-dev jpeg-dev pango-dev giflib-dev 
 COPY package*.json ./
 COPY tsconfig.json ./
 
-# Install all dependencies (including dev dependencies for build)
-RUN npm install
+# Install dependencies with retry logic and timeout
+RUN npm config set fetch-timeout 120000 && \
+    npm config set fetch-retries 5 && \
+    npm config set fetch-retries-base 1000 && \
+    npm install --no-optional 2>&1 || npm install --no-optional 2>&1 || npm install --no-optional
 
 # Copy source code
 COPY src ./src
@@ -29,6 +32,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# Install curl for health check
+RUN apk add --no-cache curl
+
 # Copy from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
@@ -42,8 +48,8 @@ VOLUME ["/app/.waweb"]
 EXPOSE 3000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/v1/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=50s --retries=3 \
+  CMD curl -f http://localhost:3000/api/v1/health || exit 1
 
 # Start server
 CMD ["node", "dist/server.js"]
