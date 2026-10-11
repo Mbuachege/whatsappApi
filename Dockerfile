@@ -1,3 +1,15 @@
+FROM node:20 AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+COPY tsconfig.json ./
+COPY src ./src
+COPY whatsapp-dashboard.html ./
+
+RUN npm install
+RUN npm run build
+
 FROM node:20-alpine
 
 WORKDIR /app
@@ -7,9 +19,9 @@ ENV PORT=3000
 
 RUN apk add --no-cache curl
 
-COPY dist ./dist
-COPY node_modules ./node_modules
-COPY whatsapp-dashboard.html ./
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/whatsapp-dashboard.html ./
 COPY package.json ./
 
 VOLUME ["/app/.waweb"]
