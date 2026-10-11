@@ -1,7 +1,6 @@
 import makeWASocket, {
   DisconnectReason,
   makeCacheableSignalKeyStore,
-  AuthenticationState,
 } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
 import P from 'pino'

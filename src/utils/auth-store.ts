@@ -3,6 +3,7 @@ import path from 'path'
 import {
   AuthenticationCreds,
   SignalDataSet,
+  AuthenticationState,
 } from '@whiskeysockets/baileys'
 import { BufferJSON } from '@whiskeysockets/baileys'
 import logger from './logger'
