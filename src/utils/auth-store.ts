@@ -5,6 +5,7 @@ import {
   AuthenticationCreds,
   SignalDataSet,
   AuthenticationState,
+  initAuthCreds,
 } from '@whiskeysockets/baileys'
 import { BufferJSON } from '@whiskeysockets/baileys'
 import logger from './logger'
@@ -206,7 +207,7 @@ export class SQLiteAuthStore {
     const creds = await this.getCreds()
 
     return {
-      creds: creds || {} as AuthenticationCreds,
+      creds: creds || initAuthCreds(),
       keys: {
         get: (type: string, ids: string[]) => this.getKeys(type, ids),
         set: (data: SignalDataSet) => this.setKeys(data),

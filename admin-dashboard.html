@@ -157,7 +157,18 @@ tr:hover td{background:var(--bg-hover)}
 
 /* Action row */
 .action-row{display:flex;gap:8px;flex-wrap:wrap}
+/* QR auth choice */
+.auth-choice{display:flex;gap:12px;margin-bottom:20px}
+.auth-choice-btn{flex:1;padding:16px;background:var(--bg);border:2px solid var(--border);border-radius:var(--radius);text-align:center;cursor:pointer;transition:all .15s}
+.auth-choice-btn:hover{border-color:var(--accent);background:var(--accent-dim)}
+.auth-choice-btn.selected{border-color:var(--accent);background:var(--accent-dim)}
+.auth-choice-btn .icon{font-size:28px;margin-bottom:6px}
+.auth-choice-btn .label{font-size:14px;font-weight:600}
+.auth-choice-btn .desc{font-size:12px;color:var(--text-muted);margin-top:2px}
+.qr-loading{color:var(--text-muted);font-size:14px;padding:20px;text-align:center}
+.qr-expired{color:var(--warn);font-size:14px;text-align:center;padding:12px}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 
@@ -438,25 +449,75 @@ tr:hover td{background:var(--bg-hover)}
     </div>
   </div>
 
-  <!-- Pairing Code Modal -->
+  <!-- Connect WhatsApp Modal (QR + Pairing Code) -->
   <div class="modal" id="modal-pairing" onclick="event.stopPropagation()">
     <h3>Connect WhatsApp</h3>
-    <div id="pairing-step-phone">
+
+    <!-- Step 1: Choose auth method -->
+    <div id="auth-step-choose">
+      <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px">Choose how to link your WhatsApp device</p>
+      <div class="auth-choice">
+        <div class="auth-choice-btn" onclick="chooseAuthMethod('qr')">
+          <div class="icon">&#x1F4F7;</div>
+          <div class="label">Scan QR Code</div>
+          <div class="desc">Scan with your phone camera</div>
+        </div>
+        <div class="auth-choice-btn" onclick="chooseAuthMethod('pairing')">
+          <div class="icon">&#x1F522;</div>
+          <div class="label">Pairing Code</div>
+          <div class="desc">Enter a code on your phone</div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Step 2a: QR Code display -->
+    <div id="auth-step-qr" class="hidden">
+      <p style="color:var(--text-muted);font-size:14px;margin-bottom:8px">Scan this QR code with your phone</p>
+      <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px">WhatsApp &rarr; Settings &rarr; Linked Devices &rarr; Link a Device</p>
+      <div class="qr-container" id="qr-display">
+        <div class="qr-loading" id="qr-loading">&#x23F3; Waiting for QR code...</div>
+        <div id="qr-canvas"></div>
+        <div class="qr-expired hidden" id="qr-expired">QR code expired. <a href="javascript:void(0)" onclick="restartQRPolling()" style="color:var(--accent)">Refresh</a></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost btn-sm" onclick="chooseAuthMethod('pairing')" style="margin-right:auto">Use pairing code instead</button>
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Step 2b: Pairing code — phone input -->
+    <div id="auth-step-phone" class="hidden">
       <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px">Enter the phone number to link with this session. Include country code without +</p>
       <form onsubmit="requestPairingCode(event)">
         <div class="form-group"><label>Phone Number</label><input type="text" id="pairing-phone" placeholder="254712345678" pattern="[0-9]{7,15}" required></div>
         <div class="form-actions">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="chooseAuthMethod('qr')" style="margin-right:auto">Use QR code instead</button>
           <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
           <button type="submit" class="btn btn-primary">Get Pairing Code</button>
         </div>
       </form>
     </div>
-    <div id="pairing-step-code" class="hidden">
+
+    <!-- Step 3: Pairing code display -->
+    <div id="auth-step-code" class="hidden">
       <p style="color:var(--text-muted);font-size:14px;margin-bottom:8px">Enter this code on your phone:</p>
       <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px">WhatsApp &rarr; Settings &rarr; Linked Devices &rarr; Link with phone number</p>
       <div class="pairing-code-display" id="pairing-code-value"></div>
       <div class="form-actions">
         <button class="btn btn-outline" onclick="closeModal()">Done</button>
+      </div>
+    </div>
+
+    <!-- Connected state -->
+    <div id="auth-step-connected" class="hidden" style="text-align:center;padding:20px 0">
+      <div style="font-size:48px;margin-bottom:12px">&#x2705;</div>
+      <h3 style="color:var(--accent);margin-bottom:8px">Connected!</h3>
+      <p style="color:var(--text-muted);font-size:14px" id="connected-phone-display"></p>
+      <div class="form-actions" style="justify-content:center;margin-top:20px">
+        <button class="btn btn-primary" onclick="closeModal(); loadSessions();">Done</button>
       </div>
     </div>
   </div>
@@ -839,7 +900,7 @@ async function connectSession(id) {
     await api('POST', `/api/v1/sessions/${id}/connect`);
     toast('Session connecting...');
     setTimeout(() => {
-      openPairing(id);
+      openAuthModal(id);
       loadSessions();
     }, 2000);
   } catch(e) { toast(e.message, 'error'); }
@@ -871,24 +932,129 @@ async function deleteSession(id) {
   } catch(e) { toast(e.message, 'error'); }
 }
 
-function openPairing(id) {
+let qrPollTimer = null;
+let qrInstance = null;
+
+function openAuthModal(id) {
   currentSessionId = id;
-  document.getElementById('pairing-step-phone').classList.remove('hidden');
-  document.getElementById('pairing-step-code').classList.add('hidden');
+  stopQRPolling();
+  hideAllAuthSteps();
+  document.getElementById('auth-step-choose').classList.remove('hidden');
   document.getElementById('pairing-phone').value = '';
   openModal('pairing');
+}
+
+function hideAllAuthSteps() {
+  ['auth-step-choose','auth-step-qr','auth-step-phone','auth-step-code','auth-step-connected'].forEach(function(stepId) {
+    document.getElementById(stepId).classList.add('hidden');
+  });
+}
+
+function chooseAuthMethod(method) {
+  hideAllAuthSteps();
+  if (method === 'qr') {
+    document.getElementById('auth-step-qr').classList.remove('hidden');
+    startQRPolling();
+  } else {
+    stopQRPolling();
+    document.getElementById('auth-step-phone').classList.remove('hidden');
+  }
+}
+
+function startQRPolling() {
+  stopQRPolling();
+  document.getElementById('qr-loading').classList.remove('hidden');
+  document.getElementById('qr-expired').classList.add('hidden');
+  clearQRCanvas();
+  pollQR();
+  qrPollTimer = setInterval(pollQR, 3000);
+}
+
+function stopQRPolling() {
+  if (qrPollTimer) {
+    clearInterval(qrPollTimer);
+    qrPollTimer = null;
+  }
+}
+
+function restartQRPolling() {
+  startQRPolling();
+}
+
+function clearQRCanvas() {
+  var canvas = document.getElementById('qr-canvas');
+  canvas.innerHTML = '';
+  qrInstance = null;
+}
+
+async function pollQR() {
+  try {
+    var res = await api('GET', '/api/v1/sessions/' + currentSessionId + '/qr');
+    if (res.connected) {
+      stopQRPolling();
+      showConnectedState(res.phone);
+      loadSessions();
+      return;
+    }
+    if (res.qr) {
+      document.getElementById('qr-loading').classList.add('hidden');
+      document.getElementById('qr-expired').classList.add('hidden');
+      renderQR(res.qr);
+    }
+  } catch(e) {
+    if (e.message && e.message.indexOf('QR_NOT_READY') !== -1) return;
+    if (e.message && e.message.indexOf('NOT_RUNNING') !== -1) {
+      stopQRPolling();
+      document.getElementById('qr-loading').textContent = 'Session not running. Please connect first.';
+    }
+  }
+}
+
+function renderQR(data) {
+  var container = document.getElementById('qr-canvas');
+  container.innerHTML = '';
+  qrInstance = new QRCode(container, {
+    text: data,
+    width: 260,
+    height: 260,
+    colorDark: '#ffffff',
+    colorLight: '#1a1d27',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+}
+
+function showConnectedState(phone) {
+  hideAllAuthSteps();
+  document.getElementById('auth-step-connected').classList.remove('hidden');
+  document.getElementById('connected-phone-display').textContent = phone ? 'Phone: ' + phone : 'Device linked successfully';
+  toast('WhatsApp connected!');
 }
 
 async function requestPairingCode(e) {
   e.preventDefault();
   try {
-    const phone = document.getElementById('pairing-phone').value;
-    const res = await api('POST', `/api/v1/sessions/${currentSessionId}/pairing-code`, { phoneNumber: phone });
-    document.getElementById('pairing-step-phone').classList.add('hidden');
-    document.getElementById('pairing-step-code').classList.remove('hidden');
+    var phone = document.getElementById('pairing-phone').value;
+    var res = await api('POST', '/api/v1/sessions/' + currentSessionId + '/pairing-code', { phoneNumber: phone });
+    hideAllAuthSteps();
+    document.getElementById('auth-step-code').classList.remove('hidden');
     document.getElementById('pairing-code-value').textContent = res.pairingCode;
     toast('Pairing code generated');
+    startPairingPoll();
   } catch(e) { toast(e.message, 'error'); }
+}
+
+function startPairingPoll() {
+  stopQRPolling();
+  qrPollTimer = setInterval(async function() {
+    try {
+      var res = await api('GET', '/api/v1/sessions/' + currentSessionId + '/qr');
+      if (res.connected) {
+        stopQRPolling();
+        showConnectedState(res.phone);
+        loadSessions();
+      }
+    } catch(e) {}
+  }, 4000);
 }
 
 // ===== Modals =====
@@ -904,6 +1070,7 @@ function openModal(id) {
 function closeModal(e) {
   if (e && e.target !== e.currentTarget) return;
   document.getElementById('modal-overlay').classList.remove('active');
+  stopQRPolling();
 }
 
 async function loadAppOptions() {
