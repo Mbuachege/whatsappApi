@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3'
 import path from 'path'
+import fs from 'fs'
 import {
   AuthenticationCreds,
   SignalDataSet,
@@ -17,6 +18,11 @@ export class SQLiteAuthStore {
   private credsPath: string
 
   constructor(dataPath: string = './.waweb') {
+    // Ensure data directory exists
+    if (!fs.existsSync(dataPath)) {
+      fs.mkdirSync(dataPath, { recursive: true })
+    }
+
     this.credsPath = path.join(dataPath, 'auth.db')
 
     // Create database connection with write-ahead logging for better concurrency
