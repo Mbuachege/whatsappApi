@@ -24,6 +24,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/whatsapp-dashboard.html ./
 COPY package.json ./
 
+RUN mkdir -p /app/.waweb
 VOLUME ["/app/.waweb"]
 
 EXPOSE 3000
