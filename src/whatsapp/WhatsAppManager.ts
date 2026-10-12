@@ -83,10 +83,11 @@ export class WhatsAppManager {
     this.sock.ev.on('connection.update', async (update: any) => {
       const { connection, lastDisconnect, qr } = update
 
-      // Handle QR code
+      // Handle QR code — also signals that the socket is ready for pairing code
       if (qr) {
         logger.info('QR code generated, waiting for scan...')
         this.qrCode = qr
+        this.pairingCode = null // Clear any stale pairing code
         this.state.status = 'QR'
         this.state.connectionError = null
       }
@@ -141,13 +142,11 @@ export class WhatsAppManager {
     })
 
     // Handle credential updates
-    this.sock.ev.on('creds.update', async (update: any) => {
+    // The creds.update event passes the creds object directly — NOT wrapped in .creds
+    this.sock.ev.on('creds.update', async (creds: any) => {
       logger.debug('Credentials updated, saving to database...')
       try {
-        // Extract the updated credentials from the update event
-        if (update.creds) {
-          await this.authStore.saveCreds(update.creds)
-        }
+        await this.authStore.saveCreds(creds)
       } catch (error) {
         logger.error('Failed to save credentials:', error)
       }
@@ -170,7 +169,15 @@ export class WhatsAppManager {
         throw new Error('Socket not initialized')
       }
 
-      // Validate phone number format
+      // If already registered (credentials exist from a previous session),
+      // a new pairing code is not needed — the socket will reconnect automatically.
+      if (this.sock.authState.creds.registered) {
+        throw new Error(
+          'Device is already registered. Disconnect or logout first before re-pairing.'
+        )
+      }
+
+      // Validate phone number format — digits only, with country code
       if (!/^\d{7,15}$/.test(phoneNumber)) {
         throw new Error(
           'Invalid phone number format. Use digits only with country code (e.g., 254712345678)'
@@ -179,6 +186,7 @@ export class WhatsAppManager {
 
       logger.info(`Requesting pairing code for ${phoneNumber}`)
       this.state.status = 'PAIRING_CODE'
+      this.qrCode = null // Clear QR — user chose pairing code instead
 
       const code = await this.sock.requestPairingCode(phoneNumber)
       this.pairingCode = code

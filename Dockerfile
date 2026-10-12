@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 COPY src ./src
-COPY whatsapp-dashboard.html ./
+COPY admin-dashboard.html ./
 
 RUN npm install
 RUN npm run build
@@ -21,11 +21,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/whatsapp-dashboard.html ./
+COPY --from=builder /app/admin-dashboard.html ./
 COPY package.json ./
 
-RUN mkdir -p /app/.waweb
-VOLUME ["/app/.waweb"]
+RUN mkdir -p /app/data/sessions
+
+VOLUME ["/app/data"]
 
 EXPOSE 3000
 

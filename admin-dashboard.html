@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhatsApp Gateway Admin</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg-card:#1a1d27;--bg-hover:#252836;--bg-input:#252836;
+  --border:#2d3148;--border-hover:#3d4168;
+  --text:#e4e6f0;--text-muted:#8b8fa8;--text-dim:#5c6078;
+  --accent:#22c55e;--accent-hover:#16a34a;--accent-dim:rgba(34,197,94,0.12);
+  --danger:#ef4444;--danger-dim:rgba(239,68,68,0.12);
+  --warn:#f59e0b;--warn-dim:rgba(245,158,11,0.12);
+  --info:#3b82f6;--info-dim:rgba(59,130,246,0.12);
+  --purple:#a855f7;--purple-dim:rgba(168,85,247,0.12);
+  --radius:10px;--radius-sm:6px;
+  --shadow:0 4px 24px rgba(0,0,0,0.3);
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
+a{color:var(--accent);text-decoration:none}
+button{font-family:var(--font);cursor:pointer;border:none;font-size:14px}
+input,select,textarea{font-family:var(--font);font-size:14px;background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;width:100%;outline:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:80px}
+
+/* Layout */
+.app{display:flex;min-height:100vh}
+.sidebar{width:260px;background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;height:100vh;z-index:100}
+.sidebar-header{padding:24px 20px;border-bottom:1px solid var(--border)}
+.sidebar-header h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px}
+.sidebar-header h1 .logo{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.sidebar-header p{font-size:12px;color:var(--text-muted);margin-top:4px}
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:var(--radius-sm);color:var(--text-muted);font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;margin-bottom:2px}
+.nav-item:hover{background:var(--bg-hover);color:var(--text)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent)}
+.nav-item svg{width:20px;height:20px;flex-shrink:0}
+.sidebar-footer{padding:16px 20px;border-top:1px solid var(--border)}
+.sidebar-footer .user-info{display:flex;align-items:center;gap:10px;font-size:13px}
+.sidebar-footer .avatar{width:32px;height:32px;background:var(--accent-dim);color:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.main{flex:1;margin-left:260px;padding:32px;max-width:1200px}
+.page-header{margin-bottom:32px}
+.page-header h2{font-size:24px;font-weight:700}
+.page-header p{color:var(--text-muted);margin-top:4px;font-size:14px}
+.page-header-row{display:flex;justify-content:space-between;align-items:center}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:var(--radius-sm);font-weight:600;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-hover)}
+.btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{opacity:.9}
+.btn-outline{background:transparent;color:var(--text-muted);border:1px solid var(--border)}.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-ghost{background:transparent;color:var(--text-muted);padding:8px 12px}.btn-ghost:hover{color:var(--text);background:var(--bg-hover)}
+.btn-sm{padding:6px 12px;font-size:13px}
+.btn-icon{padding:8px;border-radius:var(--radius-sm);background:transparent;color:var(--text-muted)}.btn-icon:hover{background:var(--bg-hover);color:var(--text)}
+
+/* Cards */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.card-header h3{font-size:16px;font-weight:600}
+
+/* Stat cards */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.stat-card .label{font-size:13px;color:var(--text-muted);font-weight:500;margin-bottom:8px}
+.stat-card .value{font-size:28px;font-weight:700}
+.stat-card .sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+.stat-card.green .value{color:var(--accent)}
+.stat-card.blue .value{color:var(--info)}
+.stat-card.purple .value{color:var(--purple)}
+.stat-card.amber .value{color:var(--warn)}
+
+/* Table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;padding:12px 16px;border-bottom:1px solid var(--border)}
+td{padding:14px 16px;border-bottom:1px solid var(--border);font-size:14px}
+tr:hover td{background:var(--bg-hover)}
+.table-empty{text-align:center;padding:48px 16px;color:var(--text-dim)}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.badge-green{background:var(--accent-dim);color:var(--accent)}
+.badge-red{background:var(--danger-dim);color:var(--danger)}
+.badge-amber{background:var(--warn-dim);color:var(--warn)}
+.badge-blue{background:var(--info-dim);color:var(--info)}
+.badge-purple{background:var(--purple-dim);color:var(--purple)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.active{opacity:1;pointer-events:all}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;width:90%;max-width:520px;padding:28px;box-shadow:var(--shadow);transform:translateY(20px);transition:transform .2s}
+.modal-overlay.active .modal{transform:translateY(0)}
+.modal h3{font-size:18px;font-weight:700;margin-bottom:20px}
+.modal .form-group{margin-bottom:16px}
+.modal .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:6px}
+.modal .form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+.modal .api-key-display{background:var(--bg);border:1px solid var(--accent);border-radius:var(--radius-sm);padding:14px;font-family:'SF Mono',Monaco,Consolas,monospace;font-size:13px;word-break:break-all;margin:16px 0}
+.modal .api-key-warning{color:var(--warn);font-size:13px;display:flex;align-items:center;gap:6px}
+
+/* Toast */
+.toast-container{position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:8px}
+.toast{padding:14px 20px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;box-shadow:var(--shadow);animation:slideIn .3s ease}
+.toast-success{background:#065f46;color:#a7f3d0;border:1px solid #10b981}
+.toast-error{background:#7f1d1d;color:#fca5a5;border:1px solid #ef4444}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* QR Code */
+.qr-container{text-align:center;padding:20px}
+.qr-container canvas,.qr-container img{max-width:280px;margin:16px auto;border-radius:var(--radius)}
+.pairing-code-display{font-size:36px;font-weight:800;letter-spacing:6px;color:var(--accent);text-align:center;padding:20px;background:var(--accent-dim);border-radius:var(--radius);margin:16px 0}
+
+/* Login page */
+.login-page{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
+.login-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:40px;width:90%;max-width:420px;box-shadow:var(--shadow)}
+.login-card h1{font-size:24px;font-weight:700;text-align:center;margin-bottom:8px}
+.login-card .subtitle{text-align:center;color:var(--text-muted);font-size:14px;margin-bottom:32px}
+.login-card .logo-wrap{text-align:center;margin-bottom:24px}
+.login-card .logo-wrap .logo{width:56px;height:56px;background:var(--accent);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:28px}
+.login-card .form-group{margin-bottom:16px}
+.login-card .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:6px}
+.login-card .btn{width:100%;justify-content:center;padding:12px;margin-top:8px}
+.login-error{background:var(--danger-dim);color:var(--danger);padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:16px;display:none}
+
+/* Copy button */
+.copy-wrap{position:relative;display:inline-flex;align-items:center;gap:8px}
+.copy-btn{background:transparent;color:var(--accent);font-size:12px;cursor:pointer;border:1px solid var(--accent);border-radius:4px;padding:2px 8px}
+.copy-btn:hover{background:var(--accent-dim)}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{width:100%;height:auto;position:relative;border-right:none;border-bottom:1px solid var(--border)}
+  .sidebar-nav{display:flex;overflow-x:auto;padding:8px}
+  .nav-item{white-space:nowrap}
+  .main{margin-left:0;padding:16px}
+  .app{flex-direction:column}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* Hidden utility */
+.hidden{display:none!important}
+
+/* Dot indicator */
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot-green{background:var(--accent)}
+.dot-red{background:var(--danger)}
+.dot-amber{background:var(--warn)}
+.dot-blue{background:var(--info)}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:10px 16px;font-size:14px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* Action row */
+.action-row{display:flex;gap:8px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<!-- LOGIN PAGE -->
+<div id="login-page" class="login-page">
+  <div class="login-card">
+    <div class="logo-wrap"><div class="logo">&#x1F4F1;</div></div>
+    <h1 id="login-title">Welcome</h1>
+    <p class="subtitle" id="login-subtitle">Sign in to WhatsApp Gateway Admin</p>
+    <div class="login-error" id="login-error"></div>
+    <form id="login-form">
+      <div class="form-group">
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" placeholder="admin" autocomplete="username" required>
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password" required>
+      </div>
+      <div class="form-group hidden" id="confirm-password-group">
+        <label for="login-confirm-password">Confirm Password</label>
+        <input type="password" id="login-confirm-password" placeholder="Confirm password">
+      </div>
+      <button type="submit" class="btn btn-primary" id="login-btn">Sign In</button>
+    </form>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app-page" class="app hidden">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1><span class="logo">&#x1F4F1;</span> WA Gateway</h1>
+      <p>Admin Console v2.0</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" data-page="applications" onclick="showPage('applications')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Applications
+      </div>
+      <div class="nav-item" data-page="sessions" onclick="showPage('sessions')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        WhatsApp Sessions
+      </div>
+      <div class="nav-item" data-page="api-docs" onclick="showPage('api-docs')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        API Docs
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="avatar" id="user-avatar">A</div>
+        <div style="flex:1">
+          <div id="user-name" style="font-weight:600">admin</div>
+          <div style="color:var(--text-dim);font-size:11px">Administrator</div>
+        </div>
+        <button class="btn-icon" onclick="logout()" title="Logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Content -->
+  <main class="main">
+    <!-- DASHBOARD PAGE -->
+    <div id="page-dashboard" class="page">
+      <div class="page-header">
+        <h2>Dashboard</h2>
+        <p>Overview of your WhatsApp API Gateway</p>
+      </div>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Quick Actions</h3>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-primary" onclick="showPage('applications');openModal('create-app')">+ New Application</button>
+          <button class="btn btn-outline" onclick="showPage('sessions');openModal('create-session')">+ New WhatsApp Session</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- APPLICATIONS PAGE -->
+    <div id="page-applications" class="page hidden">
+      <div class="page-header">
+        <div class="page-header-row">
+          <div>
+            <h2>Applications</h2>
+            <p>Manage applications and API keys</p>
+          </div>
+          <button class="btn btn-primary" onclick="openModal('create-app')">+ New Application</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Application</th><th>Status</th><th>API Keys</th><th>Sessions</th><th>Created</th><th></th></tr>
+            </thead>
+            <tbody id="apps-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- APPLICATION DETAIL (hidden by default) -->
+    <div id="page-app-detail" class="page hidden">
+      <div class="page-header">
+        <div class="page-header-row">
+          <div>
+            <h2 id="app-detail-name">Application</h2>
+            <p id="app-detail-desc"></p>
+          </div>
+          <div class="action-row">
+            <button class="btn btn-outline btn-sm" onclick="showPage('applications')">&#8592; Back</button>
+            <button class="btn btn-danger btn-sm" id="app-toggle-btn" onclick="toggleApp()">Deactivate</button>
+          </div>
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="showAppTab('keys')">API Keys</div>
+        <div class="tab" onclick="showAppTab('settings')">Settings</div>
+      </div>
+      <div id="app-tab-keys">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header">
+            <h3>API Keys</h3>
+            <button class="btn btn-primary btn-sm" onclick="openModal('create-key')">+ Generate Key</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Prefix</th><th>Status</th><th>Last Used</th><th>Created</th><th></th></tr></thead>
+              <tbody id="keys-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="app-tab-settings" class="hidden">
+        <div class="card">
+          <h3 style="margin-bottom:16px">Application Settings</h3>
+          <form id="app-settings-form">
+            <div class="form-group"><label>Name</label><input type="text" id="app-edit-name"></div>
+            <div class="form-group"><label>Description</label><textarea id="app-edit-desc"></textarea></div>
+            <div class="form-group"><label>Webhook URL</label><input type="url" id="app-edit-webhook" placeholder="https://yourapp.com/webhook"></div>
+            <div style="display:flex;gap:10px;margin-top:20px">
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+              <button type="button" class="btn btn-danger" onclick="deleteApp()">Delete Application</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- SESSIONS PAGE -->
+    <div id="page-sessions" class="page hidden">
+      <div class="page-header">
+        <div class="page-header-row">
+          <div>
+            <h2>WhatsApp Sessions</h2>
+            <p>Register and manage WhatsApp numbers</p>
+          </div>
+          <button class="btn btn-primary" onclick="openModal('create-session')">+ New Session</button>
+        </div>
+      </div>
+      <div id="sessions-grid"></div>
+    </div>
+
+    <!-- API DOCS PAGE -->
+    <div id="page-api-docs" class="page hidden">
+      <div class="page-header">
+        <h2>API Documentation</h2>
+        <p>How to integrate with the WhatsApp Gateway API</p>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <h3 style="margin-bottom:12px">Authentication</h3>
+        <p style="color:var(--text-muted);margin-bottom:12px">All API requests require an API key passed in the <code style="background:var(--bg);padding:2px 6px;border-radius:3px">X-API-Key</code> header.</p>
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:16px;font-family:monospace;font-size:13px;overflow-x:auto">
+          <span style="color:var(--info)">curl</span> -X POST https://whatsapp.digikatech.com/api/v1/send \<br>
+          &nbsp;&nbsp;-H <span style="color:var(--accent)">"X-API-Key: wag_your_api_key_here"</span> \<br>
+          &nbsp;&nbsp;-H <span style="color:var(--accent)">"Content-Type: application/json"</span> \<br>
+          &nbsp;&nbsp;-d <span style="color:var(--warn)">'{</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--warn)">"sessionId": "your-session-id",</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--warn)">"to": "254712345678",</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--warn)">"message": "Hello from my app!"</span><br>
+          &nbsp;&nbsp;<span style="color:var(--warn)">}'</span>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <h3 style="margin-bottom:12px">Admin Endpoints</h3>
+        <table>
+          <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-blue">GET</span></td><td>/api/v1/health</td><td>Health check</td></tr>
+            <tr><td><span class="badge badge-green">POST</span></td><td>/api/v1/admin/setup</td><td>Create initial admin (first time only)</td></tr>
+            <tr><td><span class="badge badge-green">POST</span></td><td>/api/v1/admin/login</td><td>Admin login</td></tr>
+            <tr><td><span class="badge badge-blue">GET</span></td><td>/api/v1/applications</td><td>List all applications</td></tr>
+            <tr><td><span class="badge badge-green">POST</span></td><td>/api/v1/applications</td><td>Create application</td></tr>
+            <tr><td><span class="badge badge-green">POST</span></td><td>/api/v1/applications/:id/keys</td><td>Generate API key</td></tr>
+            <tr><td><span class="badge badge-blue">GET</span></td><td>/api/v1/sessions</td><td>List WhatsApp sessions</td></tr>
+            <tr><td><span class="badge badge-green">POST</span></td><td>/api/v1/sessions</td><td>Create WhatsApp session</td></tr>
+            <tr><td><span class="badge badge-green">POST</span></td><td>/api/v1/sessions/:id/connect</td><td>Connect session</td></tr>
+            <tr><td><span class="badge badge-green">POST</span></td><td>/api/v1/sessions/:id/pairing-code</td><td>Get pairing code</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:12px">Response Format</h3>
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:16px;font-family:monospace;font-size:13px">
+          {<br>
+          &nbsp;&nbsp;<span style="color:var(--accent)">"success"</span>: <span style="color:var(--info)">true</span>,<br>
+          &nbsp;&nbsp;<span style="color:var(--accent)">"data"</span>: { ... }<br>
+          }
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <!-- Create Application -->
+  <div class="modal" id="modal-create-app" onclick="event.stopPropagation()">
+    <h3>Create Application</h3>
+    <form onsubmit="createApp(event)">
+      <div class="form-group"><label>Application Name *</label><input type="text" id="new-app-name" placeholder="My Mobile App" required></div>
+      <div class="form-group"><label>Description</label><textarea id="new-app-desc" placeholder="Brief description of this application"></textarea></div>
+      <div class="form-group"><label>Webhook URL</label><input type="url" id="new-app-webhook" placeholder="https://yourapp.com/webhook"></div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Application</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Create Session -->
+  <div class="modal" id="modal-create-session" onclick="event.stopPropagation()">
+    <h3>Register WhatsApp Number</h3>
+    <form onsubmit="createSession(event)">
+      <div class="form-group"><label>Session Label *</label><input type="text" id="new-session-label" placeholder="e.g. Main Business Line" required></div>
+      <div class="form-group"><label>Assign to Application</label><select id="new-session-app"><option value="">None (shared)</option></select></div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Session</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Generate API Key -->
+  <div class="modal" id="modal-create-key" onclick="event.stopPropagation()">
+    <h3>Generate API Key</h3>
+    <form onsubmit="generateKey(event)">
+      <div class="form-group"><label>Key Name</label><input type="text" id="new-key-name" placeholder="Production Key" value="Default"></div>
+      <div class="form-group"><label>Expires In (days)</label><input type="number" id="new-key-expires" placeholder="Leave empty for no expiry" min="1"></div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Generate Key</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Show API Key -->
+  <div class="modal" id="modal-show-key" onclick="event.stopPropagation()">
+    <h3>API Key Generated</h3>
+    <p style="color:var(--text-muted);font-size:14px">Copy this key now. It will not be shown again.</p>
+    <div class="api-key-display" id="generated-key-value"></div>
+    <div style="text-align:center;margin-bottom:12px">
+      <button class="btn btn-primary btn-sm" onclick="copyApiKey()">Copy to Clipboard</button>
+    </div>
+    <div class="api-key-warning">&#9888; Store this key securely. You won't be able to see it again.</div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Done</button>
+    </div>
+  </div>
+
+  <!-- Pairing Code Modal -->
+  <div class="modal" id="modal-pairing" onclick="event.stopPropagation()">
+    <h3>Connect WhatsApp</h3>
+    <div id="pairing-step-phone">
+      <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px">Enter the phone number to link with this session. Include country code without +</p>
+      <form onsubmit="requestPairingCode(event)">
+        <div class="form-group"><label>Phone Number</label><input type="text" id="pairing-phone" placeholder="254712345678" pattern="[0-9]{7,15}" required></div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Get Pairing Code</button>
+        </div>
+      </form>
+    </div>
+    <div id="pairing-step-code" class="hidden">
+      <p style="color:var(--text-muted);font-size:14px;margin-bottom:8px">Enter this code on your phone:</p>
+      <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px">WhatsApp &rarr; Settings &rarr; Linked Devices &rarr; Link with phone number</p>
+      <div class="pairing-code-display" id="pairing-code-value"></div>
+      <div class="form-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const API = '';
+let token = localStorage.getItem('wa_admin_token') || '';
+let currentAppId = '';
+let currentSessionId = '';
+let refreshInterval = null;
+
+// ===== API Helpers =====
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (token) opts.headers['Authorization'] = `Bearer ${token}`;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  const data = await res.json();
+  if (!res.ok && data.error) {
+    throw new Error(data.error.message || 'Request failed');
+  }
+  return data;
+}
+
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return 'Never';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return d.toLocaleDateString();
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => toast('Copied!')).catch(() => {});
+}
+
+// ===== Auth =====
+async function checkAuth() {
+  try {
+    const check = await api('GET', '/api/v1/admin/check');
+    if (check.setupRequired) {
+      document.getElementById('login-title').textContent = 'Create Admin Account';
+      document.getElementById('login-subtitle').textContent = 'Set up your gateway admin credentials';
+      document.getElementById('login-btn').textContent = 'Create Account';
+      document.getElementById('confirm-password-group').classList.remove('hidden');
+      document.getElementById('login-form').dataset.mode = 'setup';
+    } else if (token) {
+      try {
+        await api('GET', '/api/v1/admin/me');
+        showApp();
+        return;
+      } catch(e) {
+        token = '';
+        localStorage.removeItem('wa_admin_token');
+      }
+    }
+    document.getElementById('login-page').classList.remove('hidden');
+    document.getElementById('app-page').classList.add('hidden');
+  } catch(e) {
+    document.getElementById('login-page').classList.remove('hidden');
+  }
+}
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  const username = document.getElementById('login-username').value;
+  const password = document.getElementById('login-password').value;
+  const mode = e.target.dataset.mode;
+
+  try {
+    if (mode === 'setup') {
+      const confirm = document.getElementById('login-confirm-password').value;
+      if (password !== confirm) { errEl.textContent = 'Passwords do not match'; errEl.style.display = 'block'; return; }
+      const res = await api('POST', '/api/v1/admin/setup', { username, password });
+      token = res.token;
+    } else {
+      const res = await api('POST', '/api/v1/admin/login', { username, password });
+      token = res.token;
+    }
+    localStorage.setItem('wa_admin_token', token);
+    showApp();
+  } catch(err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }
+});
+
+async function logout() {
+  try { await api('POST', '/api/v1/admin/logout'); } catch(e) {}
+  token = '';
+  localStorage.removeItem('wa_admin_token');
+  location.reload();
+}
+
+function showApp() {
+  document.getElementById('login-page').classList.add('hidden');
+  document.getElementById('app-page').classList.remove('hidden');
+  loadDashboard();
+  if (refreshInterval) clearInterval(refreshInterval);
+  refreshInterval = setInterval(() => {
+    const activePage = document.querySelector('.page:not(.hidden)');
+    if (activePage && activePage.id === 'page-sessions') loadSessions();
+  }, 5000);
+}
+
+// ===== Pages =====
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const target = document.getElementById('page-' + page);
+  if (target) target.classList.remove('hidden');
+  const nav = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if (nav) nav.classList.add('active');
+
+  if (page === 'dashboard') loadDashboard();
+  else if (page === 'applications') loadApps();
+  else if (page === 'sessions') loadSessions();
+}
+
+// ===== Dashboard =====
+async function loadDashboard() {
+  try {
+    const res = await api('GET', '/api/v1/dashboard');
+    const s = res.stats;
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="stat-card green"><div class="label">Active Apps</div><div class="value">${s.activeApps}</div><div class="sub">${s.totalApps} total</div></div>
+      <div class="stat-card blue"><div class="label">API Keys</div><div class="value">${s.activeKeys}</div><div class="sub">${s.totalKeys} total</div></div>
+      <div class="stat-card purple"><div class="label">WhatsApp Sessions</div><div class="value">${s.totalSessions}</div><div class="sub">${s.connectedSessions} connected</div></div>
+      <div class="stat-card amber"><div class="label">System Status</div><div class="value" style="font-size:20px">&#x2714; Online</div><div class="sub">Gateway running</div></div>
+    `;
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ===== Applications =====
+async function loadApps() {
+  try {
+    const res = await api('GET', '/api/v1/applications');
+    const tbody = document.getElementById('apps-table-body');
+    if (!res.applications.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="table-empty">No applications yet. Create one to get started.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = res.applications.map(app => `
+      <tr style="cursor:pointer" onclick="openAppDetail('${app.id}')">
+        <td><strong>${esc(app.name)}</strong><br><span style="color:var(--text-dim);font-size:12px">${esc(app.description || '').substring(0,50)}</span></td>
+        <td>${app.is_active ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-red">Inactive</span>'}</td>
+        <td>${app.activeKeyCount} / ${app.keyCount}</td>
+        <td>${app.sessionCount}</td>
+        <td style="color:var(--text-muted);font-size:13px">${timeAgo(app.created_at)}</td>
+        <td><button class="btn-icon" title="View details">&#8594;</button></td>
+      </tr>
+    `).join('');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function createApp(e) {
+  e.preventDefault();
+  try {
+    await api('POST', '/api/v1/applications', {
+      name: document.getElementById('new-app-name').value,
+      description: document.getElementById('new-app-desc').value,
+      webhookUrl: document.getElementById('new-app-webhook').value || null,
+    });
+    closeModal();
+    toast('Application created');
+    loadApps();
+    document.getElementById('new-app-name').value = '';
+    document.getElementById('new-app-desc').value = '';
+    document.getElementById('new-app-webhook').value = '';
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function openAppDetail(id) {
+  currentAppId = id;
+  try {
+    const res = await api('GET', `/api/v1/applications/${id}`);
+    const app = res.application;
+    document.getElementById('app-detail-name').textContent = app.name;
+    document.getElementById('app-detail-desc').textContent = app.description || 'No description';
+    document.getElementById('app-edit-name').value = app.name;
+    document.getElementById('app-edit-desc').value = app.description || '';
+    document.getElementById('app-edit-webhook').value = app.webhook_url || '';
+    const toggleBtn = document.getElementById('app-toggle-btn');
+    if (app.is_active) {
+      toggleBtn.textContent = 'Deactivate';
+      toggleBtn.className = 'btn btn-danger btn-sm';
+    } else {
+      toggleBtn.textContent = 'Activate';
+      toggleBtn.className = 'btn btn-primary btn-sm';
+    }
+    showPage('app-detail');
+    loadKeys(id);
+    showAppTab('keys');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function showAppTab(tab) {
+  document.querySelectorAll('#page-app-detail .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#page-app-detail [id^="app-tab-"]').forEach(t => t.classList.add('hidden'));
+  event.target.classList.add('active');
+  document.getElementById('app-tab-' + tab).classList.remove('hidden');
+}
+
+async function loadKeys(appId) {
+  try {
+    const res = await api('GET', `/api/v1/applications/${appId}/keys`);
+    const tbody = document.getElementById('keys-table-body');
+    if (!res.apiKeys.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="table-empty">No API keys yet. Generate one to start integrating.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = res.apiKeys.map(k => `
+      <tr>
+        <td><strong>${esc(k.name)}</strong></td>
+        <td><code style="background:var(--bg);padding:2px 8px;border-radius:3px;font-size:12px">${esc(k.prefix)}...</code></td>
+        <td>${k.isActive ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-red">Revoked</span>'}</td>
+        <td style="color:var(--text-muted);font-size:13px">${timeAgo(k.lastUsedAt)}</td>
+        <td style="color:var(--text-muted);font-size:13px">${timeAgo(k.createdAt)}</td>
+        <td>${k.isActive ? `<button class="btn btn-danger btn-sm" onclick="revokeKey('${k.id}')">Revoke</button>` : ''}</td>
+      </tr>
+    `).join('');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function generateKey(e) {
+  e.preventDefault();
+  try {
+    const res = await api('POST', `/api/v1/applications/${currentAppId}/keys`, {
+      name: document.getElementById('new-key-name').value,
+      expiresInDays: parseInt(document.getElementById('new-key-expires').value) || null,
+    });
+    closeModal();
+    document.getElementById('generated-key-value').textContent = res.apiKey;
+    openModal('show-key');
+    loadKeys(currentAppId);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function copyApiKey() {
+  copyText(document.getElementById('generated-key-value').textContent);
+}
+
+async function revokeKey(keyId) {
+  if (!confirm('Revoke this API key? Applications using it will lose access.')) return;
+  try {
+    await api('DELETE', `/api/v1/applications/${currentAppId}/keys/${keyId}`);
+    toast('API key revoked');
+    loadKeys(currentAppId);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function toggleApp() {
+  try {
+    const res = await api('GET', `/api/v1/applications/${currentAppId}`);
+    const newState = !res.application.is_active;
+    await api('PUT', `/api/v1/applications/${currentAppId}`, { isActive: newState });
+    toast(newState ? 'Application activated' : 'Application deactivated');
+    openAppDetail(currentAppId);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteApp() {
+  if (!confirm('Delete this application? All API keys will be revoked.')) return;
+  try {
+    await api('DELETE', `/api/v1/applications/${currentAppId}`);
+    toast('Application deleted');
+    showPage('applications');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+document.getElementById('app-settings-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await api('PUT', `/api/v1/applications/${currentAppId}`, {
+      name: document.getElementById('app-edit-name').value,
+      description: document.getElementById('app-edit-desc').value,
+      webhookUrl: document.getElementById('app-edit-webhook').value || null,
+    });
+    toast('Settings saved');
+    openAppDetail(currentAppId);
+  } catch(e) { toast(e.message, 'error'); }
+});
+
+// ===== Sessions =====
+async function loadSessions() {
+  try {
+    const res = await api('GET', '/api/v1/sessions');
+    const grid = document.getElementById('sessions-grid');
+    if (!res.sessions.length) {
+      grid.innerHTML = '<div class="card"><div class="table-empty">No WhatsApp sessions yet. Register a number to get started.</div></div>';
+      return;
+    }
+    grid.innerHTML = res.sessions.map(s => {
+      const statusBadge = getStatusBadge(s.liveStatus || s.status);
+      return `
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+            <div>
+              <h3 style="font-size:16px;font-weight:600">${esc(s.label)}</h3>
+              <p style="color:var(--text-muted);font-size:13px;margin-top:4px">
+                ${s.phone_number ? '&#x1F4F1; +' + esc(s.phone_number) : 'No number linked'}
+                ${s.app_name ? ' &middot; ' + esc(s.app_name) : ''}
+              </p>
+            </div>
+            <div>${statusBadge}</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${s.liveStatus === 'CONNECTED' || s.status === 'connected' ? `
+              <button class="btn btn-outline btn-sm" onclick="disconnectSession('${s.id}')">Disconnect</button>
+              <button class="btn btn-danger btn-sm" onclick="logoutSession('${s.id}')">Logout</button>
+            ` : s.running ? `
+              <button class="btn btn-primary btn-sm" onclick="openPairing('${s.id}')">Enter Phone Number</button>
+              <button class="btn btn-outline btn-sm" onclick="disconnectSession('${s.id}')">Stop</button>
+            ` : `
+              <button class="btn btn-primary btn-sm" onclick="connectSession('${s.id}')">Connect</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteSession('${s.id}')">Delete</button>
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function getStatusBadge(status) {
+  const map = {
+    'connected': ['badge-green', 'Connected'],
+    'CONNECTED': ['badge-green', 'Connected'],
+    'connecting': ['badge-blue', 'Connecting...'],
+    'CONNECTING': ['badge-blue', 'Connecting...'],
+    'awaiting_auth': ['badge-amber', 'Awaiting Auth'],
+    'QR': ['badge-amber', 'Scan QR'],
+    'PAIRING_CODE': ['badge-amber', 'Enter Code'],
+    'disconnected': ['badge-red', 'Disconnected'],
+    'DISCONNECTED': ['badge-red', 'Disconnected'],
+    'logged_out': ['badge-red', 'Logged Out'],
+    'LOGGED_OUT': ['badge-red', 'Logged Out'],
+    'error': ['badge-red', 'Error'],
+  };
+  const [cls, label] = map[status] || ['badge-purple', status || 'Unknown'];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+async function createSession(e) {
+  e.preventDefault();
+  try {
+    await api('POST', '/api/v1/sessions', {
+      label: document.getElementById('new-session-label').value,
+      appId: document.getElementById('new-session-app').value || null,
+    });
+    closeModal();
+    toast('Session created');
+    loadSessions();
+    document.getElementById('new-session-label').value = '';
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function connectSession(id) {
+  try {
+    await api('POST', `/api/v1/sessions/${id}/connect`);
+    toast('Session connecting...');
+    setTimeout(() => {
+      openPairing(id);
+      loadSessions();
+    }, 2000);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function disconnectSession(id) {
+  try {
+    await api('POST', `/api/v1/sessions/${id}/disconnect`);
+    toast('Session disconnected');
+    loadSessions();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function logoutSession(id) {
+  if (!confirm('Logout from WhatsApp? You will need to re-pair.')) return;
+  try {
+    await api('POST', `/api/v1/sessions/${id}/logout`);
+    toast('Logged out');
+    loadSessions();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteSession(id) {
+  if (!confirm('Delete this session permanently?')) return;
+  try {
+    await api('DELETE', `/api/v1/sessions/${id}`);
+    toast('Session deleted');
+    loadSessions();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function openPairing(id) {
+  currentSessionId = id;
+  document.getElementById('pairing-step-phone').classList.remove('hidden');
+  document.getElementById('pairing-step-code').classList.add('hidden');
+  document.getElementById('pairing-phone').value = '';
+  openModal('pairing');
+}
+
+async function requestPairingCode(e) {
+  e.preventDefault();
+  try {
+    const phone = document.getElementById('pairing-phone').value;
+    const res = await api('POST', `/api/v1/sessions/${currentSessionId}/pairing-code`, { phoneNumber: phone });
+    document.getElementById('pairing-step-phone').classList.add('hidden');
+    document.getElementById('pairing-step-code').classList.remove('hidden');
+    document.getElementById('pairing-code-value').textContent = res.pairingCode;
+    toast('Pairing code generated');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ===== Modals =====
+function openModal(id) {
+  document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+  const modal = document.getElementById('modal-' + id);
+  if (modal) modal.style.display = 'block';
+  document.getElementById('modal-overlay').classList.add('active');
+
+  if (id === 'create-session') loadAppOptions();
+}
+
+function closeModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('modal-overlay').classList.remove('active');
+}
+
+async function loadAppOptions() {
+  try {
+    const res = await api('GET', '/api/v1/applications');
+    const select = document.getElementById('new-session-app');
+    select.innerHTML = '<option value="">None (shared)</option>';
+    res.applications.forEach(app => {
+      select.innerHTML += `<option value="${app.id}">${esc(app.name)}</option>`;
+    });
+  } catch(e) {}
+}
+
+function esc(str) {
+  if (!str) return '';
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// Close modal on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// Init
+checkAuth();
+</script>
+</body>
+</html>
